@@ -24,27 +24,6 @@ rule all:
         expand("{COHORT}.{prefix}.vcf", COHORT = config['ALL_VCF'],prefix = config['annovar_prefix'] ),
         output = expand("{COHORT}.{prefix}.filtered.vcf.gz", COHORT=config['ALL_VCF'], prefix=config['annovar_prefix'])
 
-"""
-        expand("{genome}.fasta", genome = config['GENOME']),
-        config['DBSNP'],
-        config['INDELS'],
-        config['GOLD_STANDARD'],
-        config['Axiom_Exome'],
-        config['G_phase1'],
-        config['G_omni2'],
-        config['hapmap_3'],
-        expand("{genome}.fasta.fai", genome = config['GENOME']),
-        expand("{genome}.rev.1.bt2", genome = config['GENOME']),
-        expand("{genome}.rev.2.bt2", genome = config['GENOME']),
-        expand("{genome}.1.bt2", genome = config['GENOME']),
-        expand("{genome}.2.bt2", genome = config['GENOME']),
-        expand("{genome}.3.bt2", genome = config['GENOME']),
-        expand("{genome}.4.bt2", genome = config['GENOME']),
-expand("{cohort}.vcf.gz", cohort=config['ALL_VCF']),
-
-expand("{COHORT}.{prefix}.vcf", COHORT = config['ALL_VCF'],prefix = config['annovar_prefix'] ),
-        output = expand("{COHORT}.{prefix}.filtered.vcf.gz", COHORT=config['ALL_VCF'], prefix=config['annovar_prefix'])
-"""
 
 rule download: 
      params:
