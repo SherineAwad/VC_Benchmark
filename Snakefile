@@ -1,5 +1,8 @@
 configfile: "config.yaml"
 
+ruleorder: index > trim > tosam > AddRG > dedup > recalibrate > tovcf >  GenomeDBImport > jointcall > annotate > hard_filter 
+
+
 rule all:
       input:
         expand("{genome}.fasta", genome = config['GENOME']),
@@ -10,6 +13,7 @@ rule all:
         config['G_phase1'],
         config['G_omni2'],
         config['hapmap_3'],
+        expand("{genome}.fasta", genome = config['GENOME']),
         expand("{genome}.fasta.fai", genome = config['GENOME']),
         expand("{genome}.rev.1.bt2", genome = config['GENOME']),
         expand("{genome}.rev.2.bt2", genome = config['GENOME']),
@@ -36,7 +40,7 @@ rule download:
         config['G_phase1'],
         config['G_omni2'],
         config['hapmap_3']
-
+        
      shell:
          """
           wget https://storage.googleapis.com/genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.fasta
@@ -60,7 +64,7 @@ rule download:
 
 rule index:
      input: 
-           expand("{genome}.fasta", genome = config['GENOME']) 
+        expand("{genome}.fasta", genome = config['GENOME']),
      params: 
         config['GENOME'] 
      output:
@@ -92,6 +96,13 @@ rule trim:
 
 rule tosam:
     input:
+        expand("{genome}.fasta.fai", genome = config['GENOME']),
+        expand("{genome}.rev.1.bt2", genome = config['GENOME']),
+        expand("{genome}.rev.2.bt2", genome = config['GENOME']),
+        expand("{genome}.1.bt2", genome = config['GENOME']),
+        expand("{genome}.2.bt2", genome = config['GENOME']),
+        expand("{genome}.3.bt2", genome = config['GENOME']),
+        expand("{genome}.4.bt2", genome = config['GENOME']),
         r1 = "galore/{sample}.r_1_val_1.fq.gz",
         r2 = "galore/{sample}.r_2_val_2.fq.gz"
     params:
@@ -149,7 +160,7 @@ rule tovcf:
        "{sample}.g.vcf" 
    shell:
        """
-       gatk --java-options "{params.mem_threads}" HaplotypeCaller -R {input[1]} -I {input[0]} -ERC GVCF  -O {output[0]}
+       gatk --java-options "{params.mem_threads}" HaplotypeCaller -R {input[1]} -I {input[0]} -ERC GVCF -L chrM -O {output[0]}
        """
 
 rule GenomeDBImport: 

@@ -1,4 +1,4 @@
-SAMPLES : ['sample1', 'sample2'] 
+SAMPLES : ['sample1'] 
 
 GENOME: "Homo_sapiens_assembly38"
 DBSNP: "Homo_sapiens_assembly38.dbsnp138.vcf"
