@@ -160,7 +160,7 @@ rule tovcf:
        "{sample}.g.vcf" 
    shell:
        """
-       gatk --java-options "{params.mem_threads}" HaplotypeCaller -R {input[1]} -I {input[0]} -ERC GVCF -L chrM -O {output[0]}
+       gatk --java-options "{params.mem_threads}" HaplotypeCaller -R {input[1]} -I {input[0]} -ERC GVCF -O {output[0]}
        """
 
 rule GenomeDBImport: 
