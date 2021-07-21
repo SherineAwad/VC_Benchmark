@@ -54,6 +54,7 @@ rule download:
         config['hapmap_3'],
         expand("{hapmap}.tbi", hapmap=config['hapmap_3'])
      benchmark: "logs/download.benchmark"  
+     conda: 'env/env-gsutil.yaml' 
      shell:
          """
              gsutil cp gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.fasta .
@@ -82,6 +83,7 @@ rule index:
         config['GENOME'] 
      log: "logs/index.log"
      benchmark: "logs/index.benchmark"
+     conda: 'env/env-align.yaml'
      threads: 8 
      output:
         expand("{genome}.fasta.fai", genome = config['GENOME']),        
@@ -102,7 +104,8 @@ rule trim:
        r1 = "{sample}.r_1.fq.gz",
        r2 = "{sample}.r_2.fq.gz"
     log: "logs/{sample}.trim.log"
-    benchmark: "logs/{sample}.trim.benchmark"  
+    benchmark: "logs/{sample}.trim.benchmark" 
+    conda :'env/env-trim.yaml' 
     output: 
       val1 = "galore/{sample}.r_1_val_1.fq.gz",
       val2 = "galore/{sample}.r_2_val_2.fq.gz"
@@ -128,7 +131,8 @@ rule tosam:
         genome = config['GENOME']
     threads: 4
     log: "logs/{sample}.align.log"
-    benchmark: "logs/{sample}.tosam.benchmark" 
+    benchmark: "logs/{sample}.tosam.benchmark"
+    conda: 'env/env-align.yaml' 
     output:
         "{sample}.sam"
     shell:
@@ -140,7 +144,8 @@ rule AddRG:
     output: 
        '{sample}.RG.sam' 
     log: "logs/{sample}.addRG.log"
-    benchmark: "logs/{sample}.AddRG.benchmark"  
+    benchmark: "logs/{sample}.AddRG.benchmark"
+    conda: 'env/env-picard.yaml'  
     params: 
         RG = config['RG']
     shell:
@@ -154,7 +159,8 @@ rule dedup:
        '{sample}.dedupped.bam',
        '{sample}.output.metrics'
      log: "logs/{sample}.dedup.log"
-     benchmark: "logs/{sample}.dedup.benchmark"  
+     benchmark: "logs/{sample}.dedup.benchmark" 
+     conda: 'env/env-picard.yaml' 
      shell:
         "picard MarkDuplicates I={input} O={output[0]} CREATE_INDEX=true M={output[1]}"
 
@@ -164,6 +170,7 @@ rule recalibrate:
          genome = expand("{genome}.fasta", genome=config['GENOME'])
     log: "logs/{sample}.recalibrate.log" 
     benchmark: "logs/{sample}.recalibrate.benchmark"
+    conda: 'env/env-gatk.yaml'
     output:
          '{sample}.recal_data.table',
          '{sample}.recalibrated.bam'
@@ -186,6 +193,7 @@ rule tovcf:
      mem_threads = {"-Xmx100g -XX:ParallelGCThreads=4"}
    log: "logs/{sample}.tovcf.log"
    benchmark: "logs/{sample}.tovcf.benchmark"  
+   conda: 'env/env-gatk.yaml'
    output:
        "{sample}.g.vcf" 
    shell:
@@ -204,6 +212,7 @@ rule GenomeDBImport:
          I =  lambda w: "-V " + " -V ".join(expand("{sample}.g.vcf", sample =config['SAMPLES']))
      log: "logs/dbimport.log"
      benchmark: "logs/DBImport.benchmark"
+     conda: 'env/env-gatk.yaml'
      output:
         directory(expand("{my_db}", my_db = config['GENOMEDB'])) 
      shell:
@@ -218,7 +227,8 @@ rule jointcall:
     params:
        mem = {"-Xmx100g"}
     log: "logs/jointcall.log"
-    benchmark: "logs/jointcall.benchmark" 
+    benchmark: "logs/jointcall.benchmark"
+    conda: 'env/env-gatk.yaml' 
     output:
        expand("{cohort}.vcf.gz", cohort=config['ALL_VCF'])
     shell:
@@ -235,11 +245,12 @@ rule annotate:
           ANNOVAR = config['ANNOVAR'],
           output = config['ALL_VCF']
      log: "logs/annotate.log" 
-     benchmark: "logs/annotate.benchmark"  
+     benchmark: "logs/annotate.benchmark" 
      output:
          expand("{COHORT}.{prefix}.vcf", COHORT = config['ALL_VCF'], prefix =config['annovar_prefix'] )
      shell:
-         """ 
+         """
+          bash download_annovar_DB.sh 
           {params.ANNOVAR}/table_annovar.pl {input.vcf} {params.humanDB} -buildver {params.version} -out {params.output} \
           -remove -protocol refGene,ensGene,cytoBand,exac03,gnomad_exome,avsnp147,dbnsfp33a,clinvar_20170130,revel -operation g,g,f,f,f,f,f,f,f  -nastring . -vcfinput  
          """
@@ -257,6 +268,7 @@ rule hard_filter:
         readposranksum = config['ReadPosRankSum']
     log: "logs/filter.log"
     benchmark: "logs/filter.benchmark"
+    conda: 'env/env-gatk.yaml'
     output:
          output = expand("{COHORT}.filtered.vcf.gz", COHORT=config['ALL_VCF'])
     shell: 
