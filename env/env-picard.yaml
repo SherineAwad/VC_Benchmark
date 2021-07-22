@@ -3,4 +3,4 @@ channels:
     - bioconda
     - defaults
 dependencies:
-    - picared=2.25.6
+    - picard=2.25.6
