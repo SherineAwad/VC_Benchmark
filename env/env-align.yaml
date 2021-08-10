@@ -6,4 +6,4 @@ channels:
 
 dependencies:
     - bowtie2=2.4.4
-    - samtools=1.11
+    - samtools=1.1
