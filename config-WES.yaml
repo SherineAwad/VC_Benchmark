@@ -21,7 +21,7 @@ hapmap_3: "hapmap_3.3.hg38.vcf.gz"
 CHROMOSOMES: ['chr1', 'chr2','chr3','chr4', 'chr5', 'chr6', 'chr7', 'chr8', 'chr9', 'chr10', 'chr11','chr12', 'chr13', 'chr14', 'chr15', 'chr16', 'chr17', 'chr18', 'chr19', 'chr20' , 'chr21', 'chr22', 'chrX', 'chrY', 'chrM'] 
 
 RG: "A00489_467.HT3G5DMXX.2"
-ALL_VCF: "all"
+ALL_VCF: "WES"
 
 ANNOVAR: /mnt/data/annovar
 humanDB: /mnt/data/annovar/humandb
