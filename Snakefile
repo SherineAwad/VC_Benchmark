@@ -1,5 +1,3 @@
-#configfile: "config-WES.yaml"
-
 ruleorder: index > trim > tosam > AddRG > dedup > recalibrate > tovcf >  GenomeDBImport > jointcall > merge > hard_filter > annotate  
 
 with open(config['INTERVALS_FILE']) as fp:
