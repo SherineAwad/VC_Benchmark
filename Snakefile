@@ -1,4 +1,4 @@
-ruleorder: index > trim > tosam > AddRG > dedup > recalibrate > tovcf >  GenomeDBImport > jointcall > merge > hard_filter > annotate  
+ruleorder: index > trim > tosam > AddRG > dedup > recalibrate > tovcf >  GenomeDBImport > jointcall  > hard_filter > annotate  
 
 with open(config['INTERVALS_FILE']) as fp:
     INTERVALS= fp.read().splitlines()
@@ -35,7 +35,7 @@ rule all:
         expand("{sample}.g.vcf", sample=config['SAMPLES']), 
         expand("DB_{interval}", interval =INTERVALS),
         expand("{interval}.vcf", interval= config['INTERVALS']),
-        expand("{cohort}.vcf.gz", cohort=config['ALL_VCF']),
+        expand("{cohort}.vcf.gz", cohort= config['ALL_VCF']),
         expand("{cohort}.filtered.vcf.gz", cohort= config['ALL_VCF']),
         expand("{cohort}.{prefix}.txt", cohort =config['ALL_VCF'], prefix=config['annovar_prefix'])
 
@@ -238,7 +238,7 @@ rule tovcf:
 
 rule GenomeDBImport:
      input:
-        expand("{sample}.g.vcf", sample = config['SAMPLES']) 
+        expand("logs/{sample}.tovcf.log", sample = config['SAMPLES']) 
      params: 
          lambda w: "-V " + " -V ".join(expand("{sample}.g.vcf", sample =config['SAMPLES'])),
          interval = "{interval}",
@@ -274,15 +274,18 @@ rule jointcall:
           gatk --java-options {params.mem} GenotypeGVCFs -R {input.genome} -V {params.V} -O {output} -G StandardAnnotation -G AS_StandardAnnotation
         """
 
-rule merge: 
-     input:  
+rule merge:
+     input: 
+         expand("{chr}.vcf" , chr=INTERVALS)
+     params:  
           I =  lambda w: "I= " + " I= ".join(expand("{chr}.vcf", chr =INTERVALS))
      output: 
           expand("{COHORT}.vcf.gz", COHORT = config['ALL_VCF'])
      shell: 
          """
-         picard MergeVcfs {input} O= {output}
+         picard MergeVcfs {params.I} O= {output}
          """
+
 rule annotate: 
      input: 
          vcf = expand("{COHORT}.filtered.vcf.gz", COHORT=config['ALL_VCF'] )
@@ -303,8 +306,8 @@ rule annotate:
          """
 
 rule hard_filter: 
-    input: 
-         vcf = expand("{COHORT}.vcf.gz", COHORT = config['ALL_VCF'])
+    input:
+       vcf = expand("{COHORT}.vcf.gz", COHORT=config['ALL_VCF'] )
     params:
         qd = config['QD'], 
         qual = config['QUAL'],
