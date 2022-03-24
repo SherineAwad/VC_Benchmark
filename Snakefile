@@ -34,7 +34,7 @@ rule all:
         expand("{sample}.recalibrated.bam", sample =config['SAMPLES']),
         expand("{sample}.g.vcf", sample=config['SAMPLES']), 
         expand("DB_{interval}", interval =INTERVALS),
-        expand("{interval}.vcf", interval= config['INTERVALS']),
+        expand("{interval}.vcf", interval= INTERVALS),
         expand("{cohort}.vcf.gz", cohort= config['ALL_VCF']),
         expand("{cohort}.filtered.vcf.gz", cohort= config['ALL_VCF']),
         expand("{cohort}.{prefix}.txt", cohort =config['ALL_VCF'], prefix=config['annovar_prefix'])
@@ -104,12 +104,14 @@ rule index:
           bowtie2-build {input} {params} --threads 8
           samtools faidx {input} 
          """
- 
+
 if config['PAIRED']:
     rule trim:
        input:
            r1 = "{sample}.r_1.fq.gz",
            r2 = "{sample}.r_2.fq.gz"
+       params:
+           threads= config['THREADS']
        output:
            "galore/{sample}.r_1_val_1.fq.gz",
            "galore/{sample}.r_2_val_2.fq.gz"
@@ -118,7 +120,7 @@ if config['PAIRED']:
            """
            mkdir -p galore
            mkdir -p fastqc
-           trim_galore --gzip --retain_unpaired --trim1 --fastqc --fastqc_args "--outdir fastqc" -o galore --paired {input.r1} {input.r2}
+           trim_galore --gzip --retain_unpaired --trim1 --fastqc --fastqc_args "--outdir fastqc" -o galore --paired {input.r1} {input.r2} --cores {params.threads}
            """
     rule tosam:
        input:
@@ -132,18 +134,21 @@ if config['PAIRED']:
           r1 = "galore/{sample}.r_1_val_1.fq.gz",
           r2 = "galore/{sample}.r_2_val_2.fq.gz"
        params:
-          genome = config['GENOME']
+          genome = config['GENOME'],
+          threads = config['THREADS']
        benchmark: "logs/{sample}.bowtie2.benchmark"
        conda: 'env/env-align.yaml'
        output:
           "{sample}.sam"
        shell:
-          "bowtie2 -x {params.genome} -1 {input.r1} -2 {input.r2} -S {output}"
+          "bowtie2 -x {params.genome} -1 {input.r1} -2 {input.r2} -S {output} -p {params.threads}" 
+
 else:
      rule trim:
        input:
            "{sample}.fq.gz",
-
+       params:
+          threads = config['THREADS']
        output:
            "galore/{sample}_trimmed.fq.gz",
        conda: 'env/env-trim.yaml'
@@ -151,7 +156,7 @@ else:
            """
            mkdir -p galore
            mkdir -p fastqc
-           trim_galore --gzip --retain_unpaired --trim1 --fastqc --fastqc_args "--outdir fastqc" -o galore {input}
+           trim_galore --gzip --retain_unpaired --trim1 --fastqc --fastqc_args "--outdir fastqc" -o galore {input} --cores {params.threads}
            """
      rule tosam:
         input:
@@ -164,13 +169,15 @@ else:
            expand("{genome}.4.bt2", genome = config['GENOME']),
            "galore/{sample}_trimmed.fq.gz"
         params:
-           genome = config['GENOME']
+           genome = config['GENOME'],
+           threads = config['THREADS']
         benchmark: "logs/{sample}.bowtie2.benchmark"
         conda: 'env/env-align.yaml'
         output:
            "{sample}.sam"
         shell:
-           "bowtie2 -x {params.genome} -U {input} -S {output}"
+           "bowtie2 -x {params.genome} -U {input} -S {output}  -p {params.threads}"
+
 
 rule AddRG: 
     input: 
@@ -210,12 +217,13 @@ rule recalibrate:
          '{sample}.recalibrated.bam'
     params: 
         mem = "-Xmx100g",
+        threads = "-XX:ParallelGCThreads=2",
         knownsites1 = config['DBSNP'],
         knownsites2 = config['INDELS'],
         knownsites3 = config['GOLD_STANDARD']
     shell:
        """
-       gatk --java-options {params.mem} BaseRecalibrator -I {input.sample} -R {input.genome} --known-sites {params.knownsites1} --known-sites {params.knownsites2} --known-sites {params.knownsites3} -O {output[0]}
+       gatk --java-options {params.mem} {params.threads} BaseRecalibrator -I {input.sample} -R {input.genome} --known-sites {params.knownsites1} --known-sites {params.knownsites2} --known-sites {params.knownsites3} -O {output[0]}
        gatk --java-options {params.mem} ApplyBQSR  -I {input.sample} -R {input.genome} --bqsr-recal-file {output[0]} -O {output[1]} 
        """ 
 
